@@ -1,25 +1,24 @@
-from scitools.std import *
+import numpy as np
 
 class Diffusion2D():
 		
-	def __init__(self,t):
-		self.a = 0
-		self.b = 1
-		self.c = 0
-		self.d = 1
-		self.D = 1
-		self.t = t
-		self.Nt = 100
-		self.Nx = 50
-		self.Ny = 50
-		self.hx = (self.b - self.a)/float((self.Nx -1))
-		self.hy = (self.b - self.a)/float((self.Ny -1))
+	def __init__(self,t,Nx,Ny):
+		self.a = 0; self.b = 1
+		self.c = 0; self.d = 1
+		self.D = 1 #Diffusion constant
+		self.t = t; self.Nx = Nx; self.Ny = Ny;
+		
+		self.Nt = 0.1	#Time iterations
+
+		self.hx = (self.b - self.a)/float((self.Nx -1))	#meshsize
+		self.hy = (self.b - self.a)/float((self.Ny -1))	#meshsize
 		self.ht = t/float(self.Nt-1)
 
 	def MC2D_U(self,walkers):
+		
 		l0 =  sqrt(2*self.D*self.ht)
-		x = zeros(walkers)
-		y = zeros(walkers)
+		x = np.zeros(walkers)
+		y = np.zeros(walkers)
 
 		for k in range(100):
 			dx = random.randint(1,5,len(x))
@@ -53,20 +52,18 @@ class Diffusion2D():
 				if y[i] >1:
 					y[i] = 0
 
-			
-			#y = array(y)
-			#x = array(x)	
-
 		plot(x,y,'o')
 		axis([0,1,0,1])
 
 	def explicit(self):
+
 		Nt,Nx,Ny,hx,hy = self.Nt,self.Nx, self.Ny, self.hx, self.hy
+
 		if self.ht > (1./2)*(((hx*hy)**2)/(hx**2 + hy**2)):
 			print " The numerical scheme is not stable for this condition"
 
-		u = zeros([Nx,Ny])
-		unew = zeros([Nx,Ny])
+		u = np.zeros([Nx,Ny])
+		unew = np.zeros([Nx,Ny])
 
 		#Boundary conditions
 		u[0,:] 	= 0
@@ -80,17 +77,15 @@ class Diffusion2D():
 			u[1:-1,:-2])/self.hy**2)
 
 			u[:,:] = unew[:,:]
-		
-		print u
 		return u
 
 	def Jacobi(self,max_iterations):
 		
 		Nt,Nx,Ny = self.Nt,self.Nx, self.Ny
 		alpha = float(self.ht)/(self.hx*self.hx)
-		u = zeros([Nx,Ny])
-		ug = zeros([Nx,Ny])
-		unew = zeros([Nx,Ny])
+		u = np.zeros([Nx,Ny])
+		ug = np.zeros([Nx,Ny])
+		unew = np.zeros([Nx,Ny])
 
 		#Boundary conditions
 		u[0,:] 	= 0
@@ -99,75 +94,60 @@ class Diffusion2D():
 		u[:,-1] = 0
 		unew[:,:] = u[:,:]
 		ug[:,:] = u[:,:]
+
 		iterations = 0
 		diff = 1
-		"""
-		for t in range(1,Nt):
-			u[:,:] = unew[:,:]
-			diff = 1
-			iterations = 0
-			while iterations < max_iterations and diff > 1E-6:
-				diff = 0
-				for i in range(1,Nx-1):
-					for j in range(1,Nx-1):
-						unew[i,j] = (1/(1+4*alpha))*(alpha*(ug[i+1,j] + ug[i-1,j] + ug[i,j+1] + ug[i,j-1])\
-						 + u[i,j])
-						diff += abs(unew[i,j]-ug[i,j])
 
-				ug[:,:] = unew[:,:]
-				iterations += 1
-		return unew
-		"""
 		#Vectorized code
 		for t in range(1,self.Nt):
 			u[:,:] = unew[:,:]
 			iterations = 0
 			diff = 1
+
 			while iterations < max_iterations and diff > 1E-6:
 				diff = 0
-				unew[1:-1,1:-1] = (1/(1+4*alpha))*(alpha*(ug[2:,1:-1] + ug[:-2,1:-1] + ug[1:-1,2:] + ug[1:-1,:-2])\
-				+ u[1:-1,1:-1])
+				unew[1:-1,1:-1] = (1/(1+4*alpha))*(alpha*(ug[2:,1:-1] + ug[:-2,1:-1] + ug[1:-1,2:] + ug[1:-1,:-2]) + u[1:-1,1:-1])
 				diff = sum(unew[:,:]-ug[:,:])
 				ug[:,:] = unew[:,:]
 				iterations += 1
+
 		return unew
-		
 
 	def exact(self):
 
-		x = linspace(self.a, self.b,self.Nx)
-		y = linspace(self.c, self.d, self.Ny)
-		u_exact = zeros([self.Nx,self.Ny])
+		x = np.linspace(self.a, self.b,self.Nx)
+		y = np.linspace(self.c, self.d, self.Ny)
+		u_exact = np.zeros([self.Nx,self.Ny])
 
-		for m in range(1,100):
-			for n in range(1,100):
+		for m in range(1,(self.Nx*2)):
+			for n in range(1,(self.Nx*2)):
 				u_exact = u_exact + self.fmn(x,y,m,n,self.t)
 		
 		return u_exact
 
 	def fmn(self,x,y,m,n,t):
 
-		Amn = (-cos(m*pi) + 1)/(m*pi)*(-2/(n*pi))
-		return sin(n*pi*x)*sin(m*pi*y)*1#exp(-pi**2*(m**2 + n**2)*t)*Amn
+		Amn = (-np.cos(m*np.pi) + 1)/(m*np.pi)*(-2/(n*np.pi))
+		return np.sin(n*np.pi*x)*np.sin(m*np.pi*y)*1#*np.exp(np.pi**2*(m**2 + n**2)*t)*Amn
 
 	def plotting(self,u):
 
-		x = linspace(0,1,self.Nx)
-		y = linspace(0,1,self.Ny)
-		x ,y = meshgrid(x,y)
+		x = np.linspace(0,1,self.Nx)
+		y = np.linspace(0,1,self.Ny)
+		x ,y = np.meshgrid(x,y)
 
 		import matplotlib.pylab as plt
 		from matplotlib import cm
 		from mpl_toolkits.mplot3d import Axes3D
 
 		fig = plt.figure()
-		ax = fig.gca(projection='3d')	
+		ax = fig.gca(projection='3d')
 		surf = ax.plot_surface(x, y, u, rstride=1, cstride=1, cmap=cm.coolwarm, linewidth=0, antialiased=False)
 		fig.colorbar(surf, shrink=0.5, aspect=5)
 		plt.show()
 
 def execute():
-	d1 = Diffusion2D(t=0.1)
+	d1 = Diffusion2D(t=0.001,Nx=100,Ny=100)
 	u = d1.exact()
 	#u = d1.explicit()
 	#u = d1.Jacobi(500)
