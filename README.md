@@ -5,3 +5,6 @@
 * Implicit scehme
 * Monte carlo
 * Iterative method
+
+
+![Alt text](/images/Figure_1.png?raw=true "Title")
