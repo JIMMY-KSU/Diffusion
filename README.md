@@ -1,7 +1,7 @@
 # Diffusion
 
 - Solves the 2+1-dimensional diffusion equation by:
-* explicit scheme
+* Explicit scheme
 * Implicit scehme
 * Monte carlo
-* iterative method
+* Iterative method
